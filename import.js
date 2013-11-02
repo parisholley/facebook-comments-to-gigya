@@ -14,7 +14,7 @@ function getUrls(callback){
 		func.wpGetAllPosts(function(err, urls){
 			if(err){
 				console.log(err);
-			}else if(urls.length == 0){
+			}else if(_.size(urls) == 0){
 				console.log('The calls to wordpress returned no results, make sure you did everything correctly.');
 			}else{
 				console.log('Finished retrieving post URLs.');
@@ -30,7 +30,7 @@ function getUrls(callback){
 }
 
 function getComments(urls, callback){
-	console.log('Processing urls: ' + urls.length);
+	console.log('Processing urls: ' + _.size(urls));
 
 	var comments = {};
 
@@ -46,9 +46,7 @@ function getComments(urls, callback){
 
 	var queue = [];
 
-	for(var key in urls){
-		var url = urls[key];
-
+	for(var url in urls){
 		if(comments[url]){
 			console.log('Skipped: ' + url);
 
@@ -85,7 +83,7 @@ getUrls(function(err, urls){
 			if(err){
 				console.log(err);
 			}else{
-				var gigya = func.convertToGigyaFormat(comments);
+				var gigya = func.convertToGigyaFormat(urls, comments);
 
 				func.writeToFile(gigya, '_gigya.json', function(){
 					console.log('Saved gigya comment export to  "_gigya.json".');

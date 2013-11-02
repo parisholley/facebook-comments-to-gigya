@@ -2,14 +2,16 @@ var wp = require('wordpress');
 var Facebook = require('facebook-node-sdk');
 var fs = require('fs');
 var async = require('async');
+var _ = require('underscore');
+var config = require('../_config.json');
 
 var client = wp.createClient({
-	url: process.argv[2],
-	username: process.argv[3],
-	password: process.argv[4]
+	url: config.wordpress,
+	username: config.username,
+	password: config.password
 });
 
-var facebook = new Facebook({ appID: process.argv[5], secret: process.argv[6]}).setAccessToken("");
+var facebook = new Facebook({ appID: config.facebook_app, secret: config.facebook_secret}).setAccessToken("");
 
 module.exports = {
 	writeToFile: function(obj, file, callback){
@@ -41,17 +43,21 @@ module.exports = {
 				return;
 			}
 
-			var urls = [];
+			var urls = {};
 
 			for(var key in results){
 				var result = results[key];
 
-				urls.push(result['link']);
+				urls[result['link']] = {
+					title: result['title'],
+					id: result['id'],
+					type: result['type']
+				};
 			}
 
-			if(urls.length == 10){
+			if(_.size(urls) == 10){
 				module.exports.wpGetPosts(function(err, moreurls){
-					urls.push.apply(urls, moreurls);
+					_.extend(urls, moreurls);
 
 					callback(err, urls);
 				}, type, page + 1);
@@ -69,7 +75,7 @@ module.exports = {
 			}
 
 			var queue = [];
-			var urls = [];
+			var urls = {};
 
 			for(var name in data){
 				var type = data[name];
@@ -77,7 +83,7 @@ module.exports = {
 				if(type.public && name != 'attachment'){
 					queue.push((function(type){return function(cb){
 						module.exports.wpGetPosts(function(err, moreurls){
-							urls.push.apply(urls, moreurls);
+							_.extend(urls, moreurls);
 
 							cb(err);
 						}, type)
@@ -139,19 +145,15 @@ module.exports = {
 		module.exports.facebookComments('/comments/?fields=id,from,message,like_count,comments,created_time&ids=' + url, callback);
 	},
 
-	convertToGigyaFormat: function(urls){
-		var authors = [];
+	convertToGigyaFormat: function(urls, comments, email){
 		var commentCount = 0;
-		var category = process.argv[8];
+		var category = config.gigya_category;
 		var streams = [];
 
-		for(var url in urls){
-			var comms = urls[url];
-			var comments = [];
+		_.each(urls, function(info, url){
+			var comms = [];
 
-			for(var key in comms){
-				var comm = comms[key];
-
+			_.each(comments[url], function(comm){
 				var replies = [];
 
 				if(comm.comments && comm.comments.data){
@@ -161,15 +163,11 @@ module.exports = {
 						replies.push({
 							"ID": reply.id,
 							"guestName": reply.from.name,
-							"guestEmail": "TODO",
+							"guestEmail": email,
 							"commentText": reply.message,
 							"state": "approved",
 							"createDate": new Date(reply.created_time).getTime()
 						});
-
-						if(authors.indexOf(reply.from.name) == -1){
-							authors.push(reply.from.name);
-						}
 
 						commentCount++;
 					}
@@ -178,43 +176,38 @@ module.exports = {
 				var comment = {
 					"ID": comm.id,
 					"guestName": comm.from.name,
-					"guestEmail": "TODO",
+					"guestEmail": email,
 					"commentText": comm.message,
 					"state": "approved",
 					"createDate": new Date(comm.created_time).getTime(),
 					"replies": replies
 				};
 
-				if(authors.indexOf(comm.from.name) == -1){
-					authors.push(comm.from.name);
-				}
-
-				comments.push(comment);
+				comms.push(comment);
 
 				commentCount++;
-			}
+			});
 
-			if(comments.length > 0){
+			if(comms.length > 0){
 				var stream = {
-					"streamID": "TODO",
-					"streamTitle": "TODO",
+					"streamID": info.type + '-' + info.id,
+					"streamTitle": info.title,
 					"streamURL": url,
 					"status": "enabled",
 					"createDate": new Date().getTime(),
-					"comments": comments
+					"comments": comms
 				};
 
 				streams.push(stream);
 			}
-		}
+		});
 
 		return {
 			"settings": {
-				"apikey": process.argv[7],
+				"apikey": config.gigya_key,
 				"importFormat": "gigya-comments-nested-import",
 				"totalCategories": 1,
 				"totalStreams": urls.length,
-				"totalAuthors": authors.length,
 				"totalComments": commentCount
 			},
 			"categories": [
