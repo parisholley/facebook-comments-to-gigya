@@ -145,7 +145,7 @@ module.exports = {
 		module.exports.facebookComments('/comments/?fields=id,from,message,like_count,comments,created_time&ids=' + url, callback);
 	},
 
-	convertToGigyaFormat: function(urls, comments, email){
+	convertToGigyaFormat: function(urls, comments){
 		var commentCount = 0;
 		var category = config.gigya_category;
 		var streams = [];
@@ -163,7 +163,7 @@ module.exports = {
 						replies.push({
 							"ID": reply.id,
 							"guestName": reply.from.name,
-							"guestEmail": email,
+							"guestEmail": config.email,
 							"commentText": reply.message,
 							"state": "approved",
 							"createDate": new Date(reply.created_time).getTime()
@@ -176,7 +176,7 @@ module.exports = {
 				var comment = {
 					"ID": comm.id,
 					"guestName": comm.from.name,
-					"guestEmail": email,
+					"guestEmail": config.email,
 					"commentText": comm.message,
 					"state": "approved",
 					"createDate": new Date(comm.created_time).getTime(),

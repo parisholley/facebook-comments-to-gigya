@@ -2,6 +2,7 @@ var fs = require('fs');
 var async = require('async');
 var func = require('./inc/functions.js');
 var Facebook = require('facebook-node-sdk');
+var _ = require('underscore');
 
 function getUrls(callback){
 	if(fs.existsSync('./_urls.json')){
