@@ -207,7 +207,7 @@ module.exports = {
 				"apikey": config.gigya_key,
 				"importFormat": "gigya-comments-nested-import",
 				"totalCategories": 1,
-				"totalStreams": urls.length,
+				"totalStreams": _.size(urls),
 				"totalComments": commentCount
 			},
 			"categories": [
